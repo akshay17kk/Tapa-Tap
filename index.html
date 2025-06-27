@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tapa tap</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+        .then(reg => console.log('Service Worker registered:', reg.scope))
+        .catch(err => console.error('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #111; color: #fff; margin: 0; padding: 0; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+    body.light-mode { background: #f5f5f5; color: #111; }
+    header { padding: 0.8rem 1rem; background: #222; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    header.light-mode { background: #ddd; }
+    header h1 { margin: 0; font-size: 1.6rem; color: #ff3c00; display: flex; align-items: center; gap: 0.4rem; }
+    .search-box { background: #222; padding: 0.4rem 0.6rem; border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; border: 1px solid #444; }
+    .light-mode .search-box { background: #eee; border: 1px solid #ccc; }
+    .search-box input { background: transparent; border: none; color: #fff; outline: none; font-size: 1rem; width: 150px; }
+    .light-mode .search-box input { color: #111; }
+    .search-box i { font-style: normal; color: #ff3c00; }
+    .filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; padding: 0.5rem; }
+    .filters button { background: #222; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; color: #fff; font-size: 0.95rem; transition: background 0.3s; }
+    .filters button:hover, .filters button.active { background: #ff3c00; }
+    .light-mode .filters button { background: #ddd; color: #111; }
+    .light-mode .filters button:hover, .light-mode .filters button.active { background: #ff3c00; color: #fff; }
+    .trending-banner { position: relative; height: 300px; background-size: cover; background-position: center; display: flex; align-items: flex-end; padding: 1rem; border-bottom: 3px solid #ff3c00; }
+    .trending-banner-info { background: rgba(0,0,0,0.5); padding: 0.5rem 1rem; border-radius: 8px; }
+    .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 1rem; padding: 1rem; }
+    .movie { background: #333; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.3s; }
+    .movie:hover { transform: scale(1.05); }
+    .movie img { width: 100%; display: block; }
+    .theme-toggle { background: #ff3c00; border: none; padding: 0.4rem 0.8rem; border-radius: 5px; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎬 Tapa tap</h1>
+    <div class="search-box">
+      <i>🔍</i>
+      <input type="text" id="searchInput" placeholder="Search title or genre">
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Dark/Light</button>
+  </header>
+
+  <div class="filters">
+    <button onclick="filterCategory('All')">All</button>
+    <button onclick="filterCategory('Influencer')">Influencer</button>
+    <button onclick="filterCategory('Instagram')">Instagram</button>
+    <button onclick="filterCategory('Trending')">Trending</button>
+    <button onclick="filterCategory('Romance')">Romance</button>
+    <button onclick="filterCategory('Top 10')">Top 10</button>
+    <button onclick="filterCategory('New')">New Releases</button>
+  </div>
+
+  <div class="trending-banner" id="trendingBanner">
+    <div class="trending-banner-info">
+      <h2 id="bannerTitle">Loading...</h2>
+      <p id="bannerGenre"></p>
+      <button onclick="watchNow()">▶ Watch Now</button>
+    </div>
+  </div>
+
+  <div class="movie-grid" id="movieList"></div>
+
+  <script>
+   const SHEET_URL = "https://sheetdb.io/api/v1/chzxis7d1l7yg";
+  let allMovies = [], trendingMovies = [], bannerIndex = 0;
+
+  function toggleTheme() {
+    document.body.classList.toggle("light-mode");
+    document.querySelector("header").classList.toggle("light-mode");
+  }
+
+  async function fetchMovies() {
+    try {
+      const res = await fetch(SHEET_URL);
+      allMovies = await res.json();
+      trendingMovies = allMovies.filter(m => m.genre.toLowerCase().includes("trending"));
+      startTrendingBanner();
+      renderMovies();
+    } catch (e) {
+      document.getElementById("movieList").innerHTML = "<p>Failed to load movies.</p>";
+    }
+  }
+
+  function startTrendingBanner() {
+    if (!trendingMovies.length) return;
+    bannerIndex = Math.floor(Math.random() * trendingMovies.length);
+    updateBanner();
+    setInterval(() => {
+      bannerIndex = (bannerIndex + 1) % trendingMovies.length;
+      updateBanner();
+    }, 4000);
+  }
+
+  function updateBanner() {
+    const m = trendingMovies[bannerIndex];
+    const banner = document.getElementById("trendingBanner");
+    banner.style.backgroundImage = `url(${m.poster})`;
+    document.getElementById("bannerTitle").innerText = m.title;
+    document.getElementById("bannerGenre").innerText = m.genre;
+  }
+
+  function watchNow() {
+    if (trendingMovies[bannerIndex]) alert(`Watch Now: ${trendingMovies[bannerIndex].title}`);
+  }
+
+  function renderMovies() {
+    const searchText = document.getElementById("searchInput").value.toLowerCase();
+    const grid = document.getElementById("movieList");
+    grid.innerHTML = "";
+
+    const filtered = allMovies.filter(m =>
+      m.title.toLowerCase().includes(searchText) ||
+      m.genre.toLowerCase().includes(searchText)
+    );
+
+    filtered.forEach(m => {
+      const div = document.createElement("div");
+      div.className = "movie";
+      div.innerHTML = `<img src="${m.poster}" alt="${m.title}"><div class="movie-info"><h4>${m.title}</h4><small>${m.genre}</small></div>`;
+      div.onclick = function() {
+        window.location.href = `movie.html?title=${encodeURIComponent(m.title)}`;
+      };
+      grid.appendChild(div);
+    });
+  }
+
+  function filterCategory(genre) {
+    document.getElementById("searchInput").value = genre === "All" ? "" : genre;
+    renderMovies();
+  }
+
+  document.getElementById("searchInput").addEventListener("input", renderMovies);
+
+  fetchMovies();
+  </script>
+</body>
+</html>

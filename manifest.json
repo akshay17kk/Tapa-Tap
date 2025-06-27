@@ -1,0 +1,20 @@
+{
+  "name": "Tapa tap",
+  "short_name": "TapaTap",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#ff3c00",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/TB02j50/file-00000000bf1461f4a17c02816e7121fb.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://i.ibb.co/TB02j50/file-00000000bf1461f4a17c02816e7121fb.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
